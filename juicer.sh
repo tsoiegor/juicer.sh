@@ -181,8 +181,8 @@ else
         echo "***! You have not provided chrom.sizes file, juicer will create one based on fasta file of the reference genome sequence. Make sure you have samtools installed";
         ## Check that refSeq exists 
         if [ ! -e "$refSeq" ]; then
-            echo "***! Reference sequence $refSeq does not exist";
-            exit 1;
+        	echo "***! Reference sequence $refSeq does not exist";
+        	exit 1;
         fi
 	echo "-: Lounching samtools"
         samtools faids $refSeq --fai-idx ${topDir}"/file.fasta.fai"
@@ -192,7 +192,7 @@ else
 	fi
 	echo "-: fasta.fai file was created"                                                                                                                                                 │
         cut -f1,2 ${topDir}"/file.fasta.fai" > ${topDir}"/file.chrom.sizes"
-	echo "-: Lounching samtools"
+	echo "-: chrom.sizes file was generated"
         genomePath=${topDir}"/file.chrom.sizes"
         rm ${topDir}"/file.fasta.fai"
     fi
