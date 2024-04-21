@@ -185,7 +185,7 @@ else
         	exit 1;
         fi
 	echo "-: Lounching samtools"
-        samtools faids $refSeq --fai-idx ${topDir}"/file.fasta.fai"
+        samtools faidx $refSeq --fai-idx ${topDir}"/file.fasta.fai"
 	if [ ! -e ${topDir}"/file.fasta.fai" ]; then
     		echo "***! file.fasta.fai was not generated";
     		exit 1;
