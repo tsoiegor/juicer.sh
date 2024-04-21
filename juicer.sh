@@ -184,8 +184,15 @@ else
             echo "***! Reference sequence $refSeq does not exist";
             exit 1;
         fi
+	echo "-: Lounching samtools"
         samtools faids $refSeq --fai-idx ${topDir}"/file.fasta.fai"
+	if [ ! -e ${topDir}"/file.fasta.fai" ]; then
+    		echo "***! file.fasta.fai was not generated";
+    		exit 1;
+	fi
+	echo "-: fasta.fai file was created"                                                                                                                                                 │
         cut -f1,2 ${topDir}"/file.fasta.fai" > ${topDir}"/file.chrom.sizes"
+	echo "-: Lounching samtools"
         genomePath=${topDir}"/file.chrom.sizes"
         rm ${topDir}"/file.fasta.fai"
     fi
