@@ -123,7 +123,7 @@ printHelpAndExit() {
     exit "$1"
 }
 
-while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:" opt; do
+while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:m" opt; do
     case $opt in
 	g) genomeID=$OPTARG ;;
 	h) printHelpAndExit 0;;
@@ -142,9 +142,28 @@ while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:" opt; do
         t) threads=$OPTARG ;;
 	j) justexact=1 ;;
 	e) earlyexit=1 ;;
+	c) cool_file=$OPTARG ;;
+	m) justcool=1 ;;
 	[?]) printHelpAndExit 1;;
     esac
 done
+
+if [ ! -z $justcool ]
+then
+	echo "(-: only cool file will be generated, -m flag was given"
+	cat $genomePath | awk 'OFS = "\t" {print $1,$2+int(150)}' > ${topDir}/modified.chrom.sizes
+	echo "(-: modified.chrom.sizes file was generated"
+	cat ${topDir}"/aligned/merged_nodups.txt" | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+	if [ $? -ne 0 ]
+	then
+		echo "(***! cool file generation failed"
+	else
+		echo "(-: cool file was generated"
+	fi
+	exit 1
+else
+	echo "m option was not given"
+fi
 
 if [ ! -z "$stage" ]
 then
@@ -184,21 +203,19 @@ else
         	echo "***! Reference sequence $refSeq does not exist";
         	exit 1;
         fi
-	echo "-: Lounching samtools"
+	echo "(-: Lounching samtools"
         samtools faidx $refSeq --fai-idx ${topDir}"/file.fasta.fai"
 	if [ ! -e ${topDir}"/file.fasta.fai" ]; then
     		echo "***! file.fasta.fai was not generated";
     		exit 1;
 	fi
-	echo "-: fasta.fai file was created"                                                                                                                                                 │
+	echo "(-: fasta.fai file was created"                                                                                                                                                 │
         cut -f1,2 ${topDir}"/file.fasta.fai" > ${topDir}"/file.chrom.sizes"
-	echo "-: chrom.sizes file was generated"
+	echo "(-: chrom.sizes file was generated"
         genomePath=${topDir}"/file.chrom.sizes"
         rm ${topDir}"/file.fasta.fai"
     fi
 fi
-
-
 
 ## Check that index for refSeq exists
 if [ ! -e "${refSeq}.bwt" ]; then
@@ -505,3 +522,16 @@ fi
 export early=$earlyexit
 export splitdir=$splitdir
 source ${juiceDir}/scripts/common/check.sh
+
+#CREATE COOL FILE IF -C FLAG WAS GIVEN
+
+if [ -z "$cool_file" ]
+then
+	echo "**! cool file creation was not required by the user"
+else
+	echo "cool file is about to be created"
+
+	cat $genomePath | awk 'OFS = "\t" {print $1,$2+int(150)}' > ${topDir}/modified.chrom.sizes
+	
+	cat ${outputdir}/merged_nodups.txt | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+fi
