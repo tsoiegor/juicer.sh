@@ -71,7 +71,7 @@ read1str="_R1"
 read2str="_R2" 
 
 ## Default options, overridden by command line arguments
-
+#cool_resolution=1000
 # Juicer directory, contains scripts/, references/, and restriction_sites/
 # can also be set in options via -D
 juiceDir="/opt/juicer"
@@ -104,6 +104,8 @@ threadsHelp="* [threads]: number of threads when running BWA alignment"
 excludeHelp="* -f: include fragment-delimited maps in hic file creation"
 justHelp="* -j: just exact duplicates excluded at dedupping step"
 helpHelp="* -h: print this help and exit"
+coolhelp="* -c: create cool file from merged nodups in the end of the pipeline"
+justcoolhelp="* -m: just create cool file without data processing and exit"
 
 printHelpAndExit() {
     echo -e "$usageHelp"
@@ -118,12 +120,14 @@ printHelpAndExit() {
     echo -e "$scriptDirHelp"
     echo -e "$ligationHelp"
     echo -e "$threadsHelp"
+    echo -e "$coolhelp"
+    echo -e "$justcoolhelp"
     echo "$excludeHelp"
     echo "$helpHelp"
     exit "$1"
 }
 
-while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:m" opt; do
+while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:q:m" opt; do
     case $opt in
 	g) genomeID=$OPTARG ;;
 	h) printHelpAndExit 0;;
@@ -144,6 +148,7 @@ while getopts "d:g:a:hs:p:y:z:S:D:fjet:b:c:m" opt; do
 	e) earlyexit=1 ;;
 	c) cool_file=$OPTARG ;;
 	m) justcool=1 ;;
+	q) cool_resolution=$OPTARG ;;
 	[?]) printHelpAndExit 1;;
     esac
 done
@@ -151,18 +156,19 @@ done
 if [ ! -z $justcool ]
 then
 	echo "(-: only cool file will be generated, -m flag was given"
+	echo "(-: resolution for cool file: $cool_resolution"
 	cat $genomePath | awk 'OFS = "\t" {print $1,$2+int(150)}' > ${topDir}/modified.chrom.sizes
 	echo "(-: modified.chrom.sizes file was generated"
-	cat ${topDir}"/aligned/merged_nodups.txt" | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+	cat ${topDir}"/aligned/merged_nodups.txt" | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:${cool_resolution} - $cool_file
 	if [ $? -ne 0 ]
 	then
-		echo "(***! cool file generation failed"
+		echo "***! cool file generation failed"
 	else
 		echo "(-: cool file was generated"
 	fi
 	exit 1
 else
-	echo "m option was not given"
+	echo "m option was not given, running entire pipeline"
 fi
 
 if [ ! -z "$stage" ]
@@ -532,6 +538,19 @@ else
 	echo "cool file is about to be created"
 
 	cat $genomePath | awk 'OFS = "\t" {print $1,$2+int(150)}' > ${topDir}/modified.chrom.sizes
-	
-	cat ${outputdir}/merged_nodups.txt | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:1000 - $cool_file
+	if [ $? -ne 0 ]
+	then
+		echo "***! failure during modified.chrom.sizes file creation"
+		exit 1
+	else
+		echo "(-: modified.chrom.sizes file was successfully created"
+	fi
+	cat ${outputdir}/merged_nodups.txt | awk 'BEGIN {OFS="\t"} ($9>=30)&&($12>=30) {print $2,$3,$6,$7}' | cooler cload pairs -c1 1 -p1 2 -c2 3 -p2 4 ${topDir}/modified.chrom.sizes:$cool_resolution - $cool_file
+	if [ $? -ne 0 ]
+	then
+		echo "***! juicer failed to create cool file"
+		exit 1
+	else
+		echo "(-: cool file was successfuly created"
+	fi
 fi
